@@ -25,20 +25,22 @@ This simulation demonstrates that if time stops entirely, motion ceases to exist
 * **GitHub Pages** for hosting.
 
 ## 📜 License
-
-This project is licensed under the **MIT License**.  
-Copyright (c) 2026 **Praveen Yadav Logic**.
-
-Permission is granted to use, copy, and modify the code, provided that the original author is credited and the license notice is included.
+Copyright (c) 2026 Praveen Yadav. All rights reserved.
+No part of this software, including the mathematical logic of the 
+Ultimate Zero Theory (UZT), the 3D simulation code, and associated 
+documentation, may be reproduced, distributed, or transmitted in any 
+form or by any means, including photocopying, recording, or other 
+electronic or mechanical methods, without the prior written permission 
+of the author, except in the case of brief quotations embodied in 
+critical reviews and certain other noncommercial uses permitted by 
+copyright law.
+For permission requests, contact the author at [py42662@gmail.com]..
 
 ## 📚 How to Cite
-
 If you are using this simulation or the **Ultimate Zero Theory (UZT)** in your research, please cite it as follows:
-
 **Author:** Praveen Yadav  
 **Project:** UZT Car Simulation - Mathematically Secured  
 **Theory:** Ultimate Zero Theory (UZT)  
 **URL:** https://p405-tech.github.io/UZT-Car-Simulation/
 
----
 *Developed with a focus on solving singularities in Pharmaceutics and Physics.*
