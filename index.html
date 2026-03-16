@@ -81,20 +81,20 @@
 
         /* --- INFO MENU --- */
         .info-btn {
-            position: absolute; top: 20px; right: 20px;
+            position: absolute; top: 10px; right: 10px;
             width: 40px; height: 40px; border-radius: 50%;
             background: var(--bg-glass);
-            backdrop-filter: blur(16px) saturate(150%); -webkit-backdrop-filter: blur(16px) saturate(150%);
+            backdrop-filter: blur(10px) saturate(100%); -webkit-backdrop-filter: blur(16px) saturate(150%);
             border: 1px solid var(--border-glass); border-top: 1px solid var(--highlight); border-left: 1px solid var(--highlight);
             box-shadow: 0 4px 15px var(--shadow-glass);
             color: var(--text-main); font-family: 'Segoe UI', sans-serif; font-weight: 900; font-size: 1.2rem;
             display: flex; justify-content: center; align-items: center;
-            cursor: pointer; z-index: 20; transition: transform 0.2s, background 0.2s;
+            cursor: pointer; z-index: 10; transition: transform 0.2s, background 0.2s;
         }
         .info-btn:hover { transform: scale(1.05); background: rgba(255, 255, 255, 0.25); }
         
         .info-panel {
-            position: absolute; top: 70px; right: 20px; width: 320px;
+            position: absolute; top: 10px; right: 10px; width: 320px;
             background: rgba(15, 15, 15, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border-radius: 15px; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             padding: 20px; color: var(--text-dim); z-index: 20;
@@ -103,16 +103,16 @@
         }
         .info-panel.active { transform: translateY(0); opacity: 1; pointer-events: auto; }
         
-        .info-section { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .info-section { margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .info-section:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
         .info-title { color: var(--accent); font-size: 0.9rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
         .info-text { font-size: 0.85rem; line-height: 1.5; }
         .info-text b { color: #fff; }
         
         .info-link {
-            display: inline-block; margin-top: 10px; padding: 8px 15px;
+            display: inline-block; margin-top: 5px; padding: 5x 8px;
             background: rgba(0, 229, 255, 0.15); color: var(--accent-warp);
-            text-decoration: none; border-radius: 8px; border: 1px solid rgba(0, 229, 255, 0.3);
+            text-decoration: none; border-radius: 5px; border: 1px solid rgba(0, 229, 255, 0.3);
             font-weight: bold; font-size: 0.85rem; transition: 0.2s; text-align: center; width: calc(100% - 30px);
         }
         .info-link:hover { background: rgba(0, 229, 255, 0.3); box-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
@@ -204,20 +204,20 @@
     <div class="info-section">
         <div class="info-title">The Logic of UZT</div>
         <div class="info-text">
-            This simulation explores the <b>Ultimate Zero Theory (UZT)</b>.<br><br>
+            This simulation explores the <b>Ultimate Zero Theory (UZT)</b>.<br>
             In traditional physics, Speed equals Distance over Time (s = d/t). As Time approaches zero, Speed traditionally approaches infinity. <br><br>
-            <b>The UZT Axiom:</b> UZT proposes that Distance/Mass divided by Zero Time equals Zero <b>(m/0 = 0)</b>. This means that if Time (t) stops entirely, motion ceases to exist, dropping Speed (s) to 0. The object enters a state of absolute rest (STEADY), avoiding impossible infinite velocities.
+            <b>The UZT Axiom:</b> UZT proposes that Distance/Mass divided by Zero Time equals Zero <b>(m/0 = 0,m)</b>. This means that if Time (t) stops entirely, motion ceases to exist, dropping Speed (s) to 0. The object enters a state of absolute rest (STEADY), avoiding impossible infinite velocities.
         </div>
     </div>
     <div class="info-section">
         <div class="info-title">Copyright</div>
         <div class="info-text">
-            © 2026 Praveen Yadav Logic. All rights reserved. Simulation mathematics, logic concepts, and the Ultimate Zero Theory are proprietary.
+            © 2026 Praveen Yadav Logic. All rights reserved. Simulation mathematics, logic concepts, and the Ultimate Zero Theory (UZT)are proprietary.
         </div>
     </div>
     <div class="info-section">
         <div class="info-title">Research</div>
-        <div class="info-text">Read the complete theory and paper here:</div>
+        <div class="info-text">Read the complete theory and Research paper here:</div>
         <a href="#" class="info-link" target="_blank" rel="noopener noreferrer">View Research Paper</a>
     </div>
 </div>
