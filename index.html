@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D UZT Chamber - Mathematically Secured</title>
+    <style>
+        :root {
+            /* Liquid Glass Colors */
+            --bg-glass: rgba(255, 255, 255, 0.15);
+            --border-glass: rgba(255, 255, 255, 0.3);
+            --shadow-glass: rgba(0, 0, 0, 0.2);
+            --highlight: rgba(255, 255, 255, 0.6);
+            
+            --accent: #ff7f50;
+            --accent-warp: #00e5ff;
+            --text-main: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.7);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #000;
+        }
+
+        #three-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+            touch-action: none;
+            outline: none;
+        }
+
+        /* --- HUD OVERLAY --- */
+        .hud-overlay {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; z-index: 5;
+        }
+        .dist-tracker {
+            position: absolute; left: 20px; top: 20px; 
+            font-family: monospace; font-size: 1.2rem; font-weight: 900; color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8); letter-spacing: 1px;
+        }
+        .speed-gauge-container {
+            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+            height: 50vh; width: 10px; background: rgba(0,0,0,0.4); border-radius: 5px; 
+            border: 1px solid rgba(255,255,255,0.3); box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+            overflow: hidden; backdrop-filter: blur(2px);
+        }
+        .speed-fill {
+            position: absolute; bottom: 0; width: 100%; height: 0%;
+            background: linear-gradient(to top, #00ff00, #ffff00, #ff0000, #00ffff);
+            transition: height 0.1s;
+        }
+        .status-center {
+            position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; width: 100%;
+        }
+        .txt-steady {
+            font-size: 2.5rem; font-weight: 900; color: #fff; letter-spacing: 6px;
+            text-shadow: 0 0 15px rgba(0,0,0,0.9); animation: pulse 1s infinite; display: none;
+        }
+        .txt-packet {
+            font-size: 1.5rem; font-weight: 800; color: var(--accent-warp);
+            letter-spacing: 3px; text-shadow: 0 0 15px #000; display: none;
+        }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+        /* --- INFO MENU --- */
+        .info-btn {
+            position: absolute; top: 20px; right: 20px;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px) saturate(150%); -webkit-backdrop-filter: blur(16px) saturate(150%);
+            border: 1px solid var(--border-glass); border-top: 1px solid var(--highlight); border-left: 1px solid var(--highlight);
+            box-shadow: 0 4px 15px var(--shadow-glass);
+            color: var(--text-main); font-family: 'Segoe UI', sans-serif; font-weight: 900; font-size: 1.2rem;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; z-index: 20; transition: transform 0.2s, background 0.2s;
+        }
+        .info-btn:hover { transform: scale(1.05); background: rgba(255, 255, 255, 0.25); }
+        
+        .info-panel {
+            position: absolute; top: 70px; right: 20px; width: 320px;
+            background: rgba(15, 15, 15, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-radius: 15px; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            padding: 20px; color: var(--text-dim); z-index: 20;
+            transform: translateY(-20px); opacity: 0; pointer-events: none;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+        }
+        .info-panel.active { transform: translateY(0); opacity: 1; pointer-events: auto; }
+        
+        .info-section { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .info-section:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+        .info-title { color: var(--accent); font-size: 0.9rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .info-text { font-size: 0.85rem; line-height: 1.5; }
+        .info-text b { color: #fff; }
+        
+        .info-link {
+            display: inline-block; margin-top: 10px; padding: 8px 15px;
+            background: rgba(0, 229, 255, 0.15); color: var(--accent-warp);
+            text-decoration: none; border-radius: 8px; border: 1px solid rgba(0, 229, 255, 0.3);
+            font-weight: bold; font-size: 0.85rem; transition: 0.2s; text-align: center; width: calc(100% - 30px);
+        }
+        .info-link:hover { background: rgba(0, 229, 255, 0.3); box-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
+
+        /* --- LIQUID GLASS NAV BAR --- */
+        .bottom-ui {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 10;
+        }
+
+        .main-bar {
+            position: relative; background: var(--bg-glass);
+            backdrop-filter: blur(16px) saturate(150%); -webkit-backdrop-filter: blur(16px) saturate(150%);
+            border-radius: 40px; padding: 8px; display: flex; align-items: center; gap: 4px;
+            box-shadow: 0 8px 32px 0 var(--shadow-glass);
+            border: 1px solid var(--border-glass); border-top: 1px solid var(--highlight); border-left: 1px solid var(--highlight);
+        }
+
+        .glass-highlight {
+            position: absolute; height: 44px; width: 120px; left: 8px; border-radius: 22px;
+            background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(8px);
+            border: 1px solid var(--highlight); box-shadow: 0 4px 15px rgba(0,0,0,0.1), inset 0 0 15px rgba(255,255,255,0.4);
+            pointer-events: none; z-index: 1;
+        }
+
+        .nav-item {
+            position: relative; z-index: 2; display: flex; align-items: center;
+            height: 44px; padding: 0 16px; border-radius: 22px; cursor: pointer;
+            color: var(--text-dim); transition: color 0.3s;
+            touch-action: none; text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+        }
+        .nav-item.active { color: var(--text-main); }
+        
+        .nav-icon { width: 22px; height: 22px; flex-shrink: 0; filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.5)); }
+        
+        .nav-text {
+            font-family: monospace; font-size: 0.95rem; font-weight: bold;
+            margin-left: 10px; white-space: nowrap; overflow: hidden;
+            max-width: 0; opacity: 0;
+            transition: max-width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+        }
+        .nav-item.active .nav-text { max-width: 140px; opacity: 1; }
+        
+        #text-startstop { color: var(--accent); }
+
+        .knob { cursor: ns-resize; }
+        .knob-ring {
+            position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+            width: 28px; height: 28px; border-radius: 50%;
+            border: 2px dashed rgba(255,255,255,0.0); transition: border-color 0.3s; pointer-events: none;
+        }
+        .nav-item.active.knob .knob-ring { border-color: rgba(255,255,255,0.8); }
+
+        /* --- LIQUID GLASS SUB BAR --- */
+        .sub-bar {
+            background: var(--bg-glass); backdrop-filter: blur(16px) saturate(150%);
+            -webkit-backdrop-filter: blur(16px) saturate(150%);
+            border-radius: 20px; padding: 6px 25px; display: flex; gap: 40px;
+            box-shadow: 0 8px 32px 0 var(--shadow-glass);
+            border: 1px solid var(--border-glass); border-top: 1px solid var(--highlight); border-left: 1px solid var(--highlight);
+        }
+        .dot-pair { display: flex; gap: 15px; }
+        .dot-container {
+            display: flex; align-items: center; gap: 6px; cursor: pointer;
+            color: var(--text-dim); font-size: 0.7rem; font-weight: 700;
+            letter-spacing: 1px; transition: 0.3s; text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+        }
+        .dot-container:hover { color: var(--text-main); }
+        .dot-container.active { color: #fff; }
+        .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: rgba(255,255,255,0.4); transition: 0.3s; box-shadow: inset 0 0 2px rgba(0,0,0,0.5);
+        }
+        .dot-container.active .dot { background: var(--accent-warp); box-shadow: 0 0 8px var(--accent-warp); }
+
+        @media (max-width: 768px) {
+            .sub-bar { gap: 20px; padding: 6px 15px; }
+            .dist-tracker { font-size: 1rem; }
+            .side-panel { width: calc(100vw - 60px); max-height: 60vh;}
+        }
+    </style>
+</head>
+<body>
+
+<div id="three-container"></div>
+
+<div class="info-btn" id="btn-info">i</div>
+<div class="info-panel" id="panel-info">
+    <div class="info-section">
+        <div class="info-title">The Logic of UZT</div>
+        <div class="info-text">
+            This simulation explores the <b>Ultimate Zero Theory (UZT)</b>.<br><br>
+            In traditional physics, Speed equals Distance over Time ($v = d/t$). As Time approaches zero, Speed traditionally approaches infinity. <br><br>
+            <b>The UZT Axiom:</b> UZT proposes that Distance/Mass divided by Zero Time equals Zero <b>($m/0 = 0$)</b>. This means that if Time ($t$) stops entirely, motion ceases to exist, dropping Speed ($v$) to $0$. The object enters a state of absolute rest (STEADY), avoiding impossible infinite velocities.
+        </div>
+    </div>
+    <div class="info-section">
+        <div class="info-title">Copyright</div>
+        <div class="info-text">
+            © 2026 Praveen Yadav Logic. All rights reserved. Simulation mathematics, logic concepts, and the Ultimate Zero Theory are proprietary.
+        </div>
+    </div>
+    <div class="info-section">
+        <div class="info-title">Research</div>
+        <div class="info-text">Read the complete theory and paper here:</div>
+        <a href="#" class="info-link" target="_blank" rel="noopener noreferrer">View Research Paper</a>
+    </div>
+</div>
+
+<div class="hud-overlay">
+    <div class="dist-tracker" id="txt-tracker">0 m / 500 m</div>
+    <div class="speed-gauge-container"><div class="speed-fill" id="hud-bar"></div></div>
+    <div class="status-center">
+        <div class="txt-steady" id="txt-steady">STEADY</div>
+        <div class="txt-packet" id="txt-packet">ENERGY PACKET</div>
+    </div>
+</div>
+
+<div style="display:none;">
+    <input type="range" id="sl-dist" min="0" max="2000" value="500">
+    <input type="range" id="sl-time" min="0" max="20" step="0.001" value="10">
+    <input type="range" id="sl-speed" min="0" max="2000" value="50">
+    <button id="btn-d-local"></button> <button id="btn-d-cosmic"></button>
+    <button id="btn-t-norm"></button> <button id="btn-t-milli"></button>
+    <button id="ignite-btn"></button>
+</div>
+
+<div class="bottom-ui">
+    <div class="main-bar" id="main-bar">
+        <div class="glass-highlight" id="glass-highlight"></div>
+        
+        <div class="nav-item active knob" id="nav-dist" data-source="dist">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20"/><path d="M6 8v8"/><path d="M10 8v8"/><path d="M14 8v8"/><path d="M18 8v8"/></svg>
+            <span class="nav-text" id="val-dist">500 m</span>
+            <div class="knob-ring"></div>
+        </div>
+        
+        <div class="nav-item knob" id="nav-time" data-source="time">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span class="nav-text" id="val-time">10.000 s</span>
+            <div class="knob-ring"></div>
+        </div>
+        
+        <div class="nav-item knob" id="nav-speed" data-source="speed">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14l4-4"/><path d="M3.34 16A10 10 0 1 1 20.66 16"/></svg>
+            <span class="nav-text" id="val-speed">50 m/s</span>
+            <div class="knob-ring"></div>
+        </div>
+        
+        <div class="nav-item" id="nav-startstop">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor" id="icon-play"><path d="M8 5v14l11-7z"/></svg>
+            <span class="nav-text" id="text-startstop">Start</span>
+        </div>
+    </div>
+    
+    <div class="sub-bar">
+        <div class="dot-pair" id="pair-scale">
+            <div class="dot-container active" data-val="local">
+                <div class="dot"></div><span>LOCAL</span>
+            </div>
+            <div class="dot-container" data-val="cosmic">
+                <div class="dot"></div><span>COSMIC</span>
+            </div>
+        </div>
+        <div class="dot-pair" id="pair-time">
+            <div class="dot-container active" data-val="norm">
+                <div class="dot"></div><span>NORM</span>
+            </div>
+            <div class="dot-container" data-val="milli">
+                <div class="dot"></div><span>MILLI</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="billboard-text" style="display:none;">
+    The Ultimate Zero Theory|Praveen Yadav Logic
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // --- INFO MENU LOGIC ---
+    const btnInfo = document.getElementById('btn-info');
+    const panelInfo = document.getElementById('panel-info');
+    
+    btnInfo.addEventListener('click', (e) => {
+        panelInfo.classList.toggle('active');
+        e.stopPropagation(); 
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!panelInfo.contains(e.target) && e.target !== btnInfo) {
+            panelInfo.classList.remove('active');
+        }
+    });
+
+    // --- NAV BAR INTERACTION LOGIC ---
+    const navItems = document.querySelectorAll('.nav-item');
+    const glass = document.getElementById('glass-highlight');
+
+    function setActiveNav(index) {
+        navItems.forEach((item, i) => {
+            if(i === index) item.classList.add('active');
+            else item.classList.remove('active');
+        });
+    }
+
+    function trackGlassAnimation() {
+        const activeItem = document.querySelector('.nav-item.active');
+        if(activeItem && glass) {
+            glass.style.left = activeItem.offsetLeft + 'px';
+            glass.style.width = activeItem.offsetWidth + 'px';
+        }
+        requestAnimationFrame(trackGlassAnimation);
+    }
+    trackGlassAnimation();
+
+    let isDragging = false;
+    let startY = 0;
+    let activeSource = null;
+    let activeKnobRing = null;
+    let currentRotation = 0;
+
+    function startDrag(e, source, item) {
+        isDragging = true;
+        startY = e.clientY || e.touches[0].clientY;
+        activeSource = source; 
+        activeKnobRing = item.querySelector('.knob-ring');
+        document.body.style.cursor = 'ns-resize';
+        e.preventDefault();
+    }
+
+    window.addEventListener('pointermove', (e) => {
+        if(!isDragging) return;
+        let clientY = e.clientY || (e.touches ? e.touches[0].clientY : startY);
+        let deltaY = startY - clientY; 
+        startY = clientY; 
+        
+        currentRotation += deltaY * 2;
+        if(activeKnobRing) activeKnobRing.style.transform = `translateY(-50%) rotate(${currentRotation}deg)`;
+        
+        const sl = document.getElementById('sl-' + activeSource);
+        const min = parseFloat(sl.min) || 0;
+        const max = parseFloat(sl.max) || 2000;
+        let range = max - min;
+        
+        let step = range / 200; 
+        if(activeSource === 'time') step = range / 150; 
+        if(modeD === 'cosmic' && activeSource === 'dist') step = range / 100; 
+        
+        let newVal = (parseFloat(sl.value) || 0) + (deltaY * step);
+        newVal = Math.max(min, Math.min(max, newVal));
+        sl.value = newVal;
+        
+        updatePhysics(activeSource);
+        updateNavBarText();
+        if(activeSource === 'dist' || activeSource === 'time') updateTargetDistance();
+    });
+
+    window.addEventListener('pointerup', () => {
+        isDragging = false;
+        document.body.style.cursor = 'default';
+    });
+
+    navItems.forEach((item, i) => {
+        item.addEventListener('pointerdown', (e) => {
+            if (!item.classList.contains('active')) setActiveNav(i);
+            if(item.classList.contains('knob')) {
+                startDrag(e, item.dataset.source, item);
+            } else if(item.id === 'nav-startstop') {
+                document.getElementById('ignite-btn').click(); 
+            }
+        });
+    });
+
+    function updateNavBarText() {
+        const d = parseFloat(document.getElementById('sl-dist').value) || 0;
+        const t = parseFloat(document.getElementById('sl-time').value) || 0;
+        const v = parseFloat(document.getElementById('sl-speed').value) || 0;
+
+        const txtD = document.getElementById('val-dist');
+        const txtT = document.getElementById('val-time');
+        const txtS = document.getElementById('val-speed');
+
+        if(modeD === 'cosmic') txtD.innerText = d.toFixed(0) + " M"; 
+        else txtD.innerText = d.toFixed(0) + " m";
+
+        txtT.innerText = t.toFixed(3) + (isMilli ? " ms" : " s");
+        
+        if (v >= C * 0.999) {
+            txtS.innerText = "LIGHT SPEED";
+        } else {
+            if(v > 1000000) txtS.innerText = (v/1000000).toFixed(1) + "M m/s";
+            else if (v > 1000) txtS.innerText = (v/1000).toFixed(1) + "k m/s";
+            else txtS.innerText = v.toFixed(0) + " m/s";
+        }
+    }
+
+    document.querySelectorAll('#pair-scale .dot-container').forEach(el => {
+        el.addEventListener('pointerdown', () => {
+            document.querySelectorAll('#pair-scale .dot-container').forEach(d => d.classList.remove('active'));
+            el.classList.add('active');
+            if (el.dataset.val === 'local') document.getElementById('btn-d-local').click();
+            else document.getElementById('btn-d-cosmic').click();
+        });
+    });
+
+    document.querySelectorAll('#pair-time .dot-container').forEach(el => {
+        el.addEventListener('pointerdown', () => {
+            document.querySelectorAll('#pair-time .dot-container').forEach(d => d.classList.remove('active'));
+            el.classList.add('active');
+            if (el.dataset.val === 'norm') document.getElementById('btn-t-norm').click();
+            else document.getElementById('btn-t-milli').click();
+        });
+    });
+
+    // --- THREE.JS LOGIC & SECURE RENDERING ---
+    const C = 299792458; 
+    let modeD = 'local';
+    let isMilli = false;
+    let isMoving = false;
+    let accumulatedDistance = 0; 
+    let targetDistance = 0;      
+    let lastFrameTime = performance.now(); // Secure init
+
+    const slDist = document.getElementById('sl-dist');
+    const slTime = document.getElementById('sl-time');
+    const slSpeed = document.getElementById('sl-speed');
+    const hudBar = document.getElementById('hud-bar');
+    const hudSteady = document.getElementById('txt-steady');
+    const hudPacket = document.getElementById('txt-packet');
+    const txtTracker = document.getElementById('txt-tracker');
+    const btnIgnite = document.getElementById('ignite-btn');
+    const iconPlay = document.getElementById('icon-play');
+    const textStartStop = document.getElementById('text-startstop');
+
+    const scene = new THREE.Scene();
+    const skyColor = new THREE.Color(0x87CEEB); 
+    scene.background = skyColor;
+    scene.fog = new THREE.Fog(0x87CEEB, 20, 800); 
+
+    // Secure Camera Init (Prevents NaN Aspect Ratios)
+    const initW = window.innerWidth || 800;
+    const initH = window.innerHeight || 600;
+    const camera = new THREE.PerspectiveCamera(60, initW / initH, 0.1, 2000);
+    camera.position.set(0, 10, 20); 
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setSize(initW, initH);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFShadowMap; 
+    document.getElementById('three-container').appendChild(renderer.domElement);
+
+    window.addEventListener('resize', () => {
+        const w = window.innerWidth || 800;
+        const h = window.innerHeight || 600;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+    });
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05; 
+    controls.minDistance = 2; 
+    controls.maxDistance = 800; 
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(50, 100, 50); 
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024; 
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.left = -150;
+    dirLight.shadow.camera.right = 150;
+    dirLight.shadow.camera.top = 150;
+    dirLight.shadow.camera.bottom = -150;
+    scene.add(dirLight);
+
+    const carGroup = new THREE.Group();
+    
+    const chassisGeo = new THREE.BoxGeometry(3, 0.8, 4.5);
+    const chassisMat = new THREE.MeshLambertMaterial({ color: 0xf39c12 });
+    const chassis = new THREE.Mesh(chassisGeo, chassisMat);
+    chassis.position.y = 1; chassis.castShadow = true; carGroup.add(chassis);
+
+    const cabinGeo = new THREE.BoxGeometry(2.8, 1.2, 3);
+    const cabinMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+    cabin.position.set(0, 2, -0.2); cabin.castShadow = true; carGroup.add(cabin);
+
+    const wheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 20);
+    wheelGeo.rotateZ(Math.PI / 2);
+    const wheelMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+    const wheelPositions = [[1.6, 0.5, 1.5], [-1.6, 0.5, 1.5], [1.6, 0.5, -1.5], [-1.6, 0.5, -1.5]];
+    wheelPositions.forEach(pos => {
+        const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+        wheel.position.set(...pos); wheel.castShadow = true; carGroup.add(wheel);
+    });
+
+    const hlGeo = new THREE.BoxGeometry(0.6, 0.3, 0.1);
+    const hlMat = new THREE.MeshBasicMaterial({ color: 0xffffee }); 
+    const hlRight = new THREE.Mesh(hlGeo, hlMat); hlRight.position.set(1.1, 1.1, -2.26);
+    const hlLeft = new THREE.Mesh(hlGeo, hlMat); hlLeft.position.set(-1.1, 1.1, -2.26);
+    carGroup.add(hlRight, hlLeft);
+
+    const tlMat = new THREE.MeshBasicMaterial({ color: 0xff0000 }); 
+    const tlRight = new THREE.Mesh(hlGeo, tlMat); tlRight.position.set(1.1, 1.1, 2.26);
+    const tlLeft = new THREE.Mesh(hlGeo, tlMat); tlLeft.position.set(-1.1, 1.1, 2.26);
+    carGroup.add(tlRight, tlLeft);
+
+    scene.add(carGroup);
+
+    const photonGeo = new THREE.SphereGeometry(1.5, 32, 32);
+    const photonMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.8 });
+    const photon = new THREE.Mesh(photonGeo, photonMat);
+    photon.position.y = 1.5; photon.visible = false;
+    scene.add(photon);
+
+    function createBillboardTexture() {
+        const rawText = document.getElementById('billboard-text').innerHTML || "The Ultimate Zero Theory|Praveen Yadav Logic";
+        const lines = rawText.split('|');
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024; canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 15;
+        ctx.strokeRect(10, 10, canvas.width-20, canvas.height-20);
+        ctx.strokeStyle = '#ff0055'; ctx.lineWidth = 5;
+        ctx.strokeRect(25, 25, canvas.width-50, canvas.height-50);
+
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        
+        lines.forEach((line, index) => {
+            if(index === 0) {
+                ctx.font = 'bold 70px "Segoe UI", sans-serif';
+                ctx.fillStyle = '#ff7f50'; 
+                ctx.shadowColor = '#ff7f50'; ctx.shadowBlur = 20;
+                ctx.fillText(line.trim(), canvas.width/2, 180);
+                ctx.shadowBlur = 0;
+            } else {
+                ctx.font = 'bold 45px "Segoe UI", sans-serif';
+                ctx.fillStyle = '#00e5ff';
+                ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 10;
+                ctx.fillText(line.trim(), canvas.width/2, 300 + (index-1)*60);
+                ctx.shadowBlur = 0;
+            }
+        });
+        return new THREE.CanvasTexture(canvas);
+    }
+    
+    const sharedBillboardTexture = createBillboardTexture();
+    const bbMaterial = new THREE.MeshBasicMaterial({ map: sharedBillboardTexture });
+
+    const localGroup = new THREE.Group();
+    const cityTiles = [];
+    const tileSize = 200;
+
+    function createMediaBuilding(x, z, rotY) {
+        const group = new THREE.Group();
+        
+        const bHeight = 35 + Math.random()*15;
+        const bGeo = new THREE.BoxGeometry(20, bHeight, 15);
+        const bMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+        const bldg = new THREE.Mesh(bGeo, bMat);
+        bldg.position.y = bHeight / 2;
+        bldg.castShadow = true; bldg.receiveShadow = true;
+        group.add(bldg);
+
+        const frontScreen = new THREE.Mesh(new THREE.PlaneGeometry(20, 10), bbMaterial);
+        frontScreen.position.set(0, bHeight * 0.7, 7.51); 
+        group.add(frontScreen);
+
+        const sideScreen = new THREE.Mesh(new THREE.PlaneGeometry(15, 10), bbMaterial);
+        if (x < 0) {
+            sideScreen.position.set(10.01, bHeight * 0.7, 0); sideScreen.rotation.y = Math.PI / 2;
+        } else { 
+            sideScreen.position.set(-10.01, bHeight * 0.7, 0); sideScreen.rotation.y = -Math.PI / 2;
+        }
+        group.add(sideScreen);
+
+        group.position.set(x, 0, z);
+        group.rotation.y = rotY;
+        return group;
+    }
+
+    function createCityTile(zOffset) {
+        const tile = new THREE.Group();
+        
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(tileSize, tileSize), new THREE.MeshLambertMaterial({ color: 0x8fbc8f }));
+        ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; tile.add(ground);
+
+        const road = new THREE.Mesh(new THREE.PlaneGeometry(14, tileSize), new THREE.MeshLambertMaterial({ color: 0x444444 }));
+        road.rotation.x = -Math.PI / 2; road.position.y = 0.02; road.receiveShadow = true; tile.add(road);
+
+        const line = new THREE.Mesh(new THREE.PlaneGeometry(0.3, tileSize), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        line.rotation.x = -Math.PI / 2; line.position.y = 0.04; tile.add(line);
+
+        const crossRoad = new THREE.Mesh(new THREE.PlaneGeometry(tileSize, 10), new THREE.MeshLambertMaterial({ color: 0x444444 }));
+        crossRoad.rotation.x = -Math.PI / 2; crossRoad.position.set(0, 0.03, 0); crossRoad.receiveShadow = true; tile.add(crossRoad);
+
+        const mediaBldg1 = createMediaBuilding(-22, 40, Math.PI / 16); tile.add(mediaBldg1);
+        const mediaBldg2 = createMediaBuilding(22, -40, -Math.PI / 16); tile.add(mediaBldg2);
+
+        const bldgColors = [0xa0b0c0, 0x8a9ea8, 0xb8c5d1, 0x7c8d99];
+        for(let i=0; i<40; i++) {
+            let bx = (Math.random() - 0.5) * 180; let bz = (Math.random() - 0.5) * 180;
+            if(Math.abs(bx) < 15 || Math.abs(bz) < 15) continue; 
+            if(Math.hypot(bx - (-22), bz - 40) < 25) continue; 
+            if(Math.hypot(bx - (22), bz - (-40)) < 25) continue; 
+            
+            const height = 15 + Math.random() * 30;
+            const b = new THREE.Mesh(
+                new THREE.BoxGeometry(5 + Math.random()*10, height, 5 + Math.random()*10), 
+                new THREE.MeshLambertMaterial({ color: bldgColors[Math.floor(Math.random() * bldgColors.length)] })
+            );
+            b.position.set(bx, height/2, bz);
+            b.castShadow = true; b.receiveShadow = true; tile.add(b);
+        }
+        tile.position.z = zOffset;
+        return tile;
+    }
+
+    const numTiles = 8;
+    for(let i=-2; i<numTiles-2; i++) { 
+        const tile = createCityTile(-i * tileSize);
+        cityTiles.push(tile);
+        localGroup.add(tile);
+    }
+    scene.add(localGroup);
+
+    const starGeo = new THREE.BufferGeometry();
+    const starPoints = [];
+    for(let i=0; i<10000; i++) {
+        starPoints.push(THREE.MathUtils.randFloatSpread(1200), THREE.MathUtils.randFloatSpread(1200), THREE.MathUtils.randFloatSpread(1200));
+    }
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPoints, 3));
+    const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.8}));
+    stars.visible = false;
+    scene.add(stars);
+
+    function updatePhysics(source) {
+        // Secure parsing
+        let d = parseFloat(slDist.value) || 0;
+        let t_ui = parseFloat(slTime.value) || 0;
+        let v = parseFloat(slSpeed.value) || 0;
+
+        let timeMult = isMilli ? 0.001 : 1;
+        let t_phys = t_ui * timeMult;
+
+        if (modeD === 'cosmic') {
+            d = d * 1000000; 
+            slSpeed.max = C;
+        } else {
+            slSpeed.max = 2000;
+        }
+
+        // --- MATH SAFEGUARDS (Prevents NaN crashes) ---
+        if (source === 'dist' || source === 'time') {
+            if (t_phys === 0) { v = 0; } else { v = d / t_phys; }
+            if (isNaN(v) || !isFinite(v)) v = 0;
+            slSpeed.value = Math.min(v, parseFloat(slSpeed.max) || 2000);
+        } else if (source === 'speed') {
+            if (v === 0) {
+                t_phys = 0; t_ui = 0;
+            } else {
+                t_phys = d / v; t_ui = t_phys / timeMult;
+            }
+            if (isNaN(t_ui) || !isFinite(t_ui)) t_ui = 0;
+            if (t_ui > parseFloat(slTime.max)) slTime.max = Math.ceil(t_ui * 1.5);
+            slTime.value = t_ui;
+        }
+
+        // Force secure numbers before applying to WebGL
+        v = parseFloat(slSpeed.value) || 0;
+        const maxV = parseFloat(slSpeed.max) || 2000;
+        const ratio = v / C;
+        
+        // Block negative roots & NaNs
+        const gamma_inv = Math.sqrt(Math.max(0, 1 - Math.pow(Math.min(ratio, 0.9999), 2))) || 1;
+        carGroup.scale.z = gamma_inv;
+
+        hudBar.style.height = (v / maxV * 100) + "%";
+        hudSteady.style.display = t_ui === 0 ? "block" : "none";
+        
+        const isLight = v >= C * 0.99;
+        hudPacket.style.display = isLight ? "block" : "none";
+        carGroup.visible = !isLight;
+        photon.visible = isLight;
+
+        if(!isMoving) {
+            targetDistance = modeD === 'cosmic' ? (parseFloat(slDist.value) || 0) * 1000000 : (parseFloat(slDist.value) || 0);
+            if (modeD === 'cosmic') {
+                txtTracker.innerText = "0M / " + (targetDistance / 1000000).toFixed(0) + "M km";
+            } else {
+                txtTracker.innerText = "0 / " + targetDistance.toFixed(0) + " m";
+            }
+        }
+        
+        updateNavBarText();
+    }
+
+    document.getElementById('btn-d-local').onclick = () => {
+        modeD = 'local'; localGroup.visible = true; stars.visible = false;
+        scene.background = skyColor; scene.fog.color = skyColor;
+        updatePhysics('dist'); updateTargetDistance();
+    };
+
+    document.getElementById('btn-d-cosmic').onclick = () => {
+        modeD = 'cosmic'; localGroup.visible = false; stars.visible = true;
+        scene.background = new THREE.Color(0x000005); scene.fog.color = new THREE.Color(0x000005);
+        updatePhysics('dist'); updateTargetDistance();
+    };
+
+    document.getElementById('btn-t-norm').onclick = () => {
+        isMilli = false; updatePhysics('time');
+    };
+
+    document.getElementById('btn-t-milli').onclick = () => {
+        isMilli = true; updatePhysics('time');
+    };
+
+    function updateTargetDistance() {
+        if (!isMoving) targetDistance = modeD === 'cosmic' ? (parseFloat(slDist.value) || 0) * 1000000 : (parseFloat(slDist.value) || 0);
+    }
+
+    btnIgnite.onclick = () => {
+        const v = parseFloat(slSpeed.value) || 0;
+        if (v <= 0) return; 
+
+        if (isMoving) {
+            isMoving = false;
+            textStartStop.innerText = "Start";
+            iconPlay.innerHTML = '<path d="M8 5v14l11-7z"/>';
+            carGroup.position.set(0,0,0);
+        } else {
+            isMoving = true;
+            textStartStop.innerText = "Stop";
+            iconPlay.innerHTML = '<path d="M6 6h12v12H6z"/>';
+            accumulatedDistance = 0; 
+            targetDistance = modeD === 'cosmic' ? (parseFloat(slDist.value) || 0) * 1000000 : (parseFloat(slDist.value) || 0);
+            lastFrameTime = performance.now();
+        }
+    };
+
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+
+        const currentTime = performance.now();
+        const deltaTime = (currentTime - lastFrameTime) / 1000; 
+        lastFrameTime = currentTime;
+
+        if (isMoving) {
+            const v = parseFloat(slSpeed.value) || 0;
+            const maxV = parseFloat(slSpeed.max) || 2000;
+            let timeMult = isMilli ? 1000 : 1;
+            let distanceThisFrame = v * (deltaTime * timeMult);
+            
+            accumulatedDistance += distanceThisFrame;
+
+            if (modeD === 'cosmic') {
+                txtTracker.innerText = (accumulatedDistance / 1000000).toFixed(2) + "M / " + (targetDistance / 1000000).toFixed(0) + "M km";
+            } else {
+                txtTracker.innerText = accumulatedDistance.toFixed(1) + " / " + targetDistance.toFixed(0) + " m";
+            }
+
+            if (accumulatedDistance >= targetDistance) {
+                isMoving = false;
+                textStartStop.innerText = "Start";
+                iconPlay.innerHTML = '<path d="M8 5v14l11-7z"/>';
+                carGroup.position.set(0, 0, 0); 
+                txtTracker.innerText = "DESTINATION REACHED";
+            } else {
+                const moveVisual = Math.min((v / maxV) * 8, 8); 
+
+                if (modeD === 'local') {
+                    cityTiles.forEach(t => {
+                        t.position.z += moveVisual;
+                        if (t.position.z > tileSize * 2) t.position.z -= (numTiles * tileSize); 
+                    });
+                } else {
+                    const pos = stars.geometry.attributes.position.array;
+                    for(let i=0; i<pos.length; i+=3) {
+                        pos[i+2] += moveVisual * 10;
+                        if (pos[i+2] > 600) pos[i+2] -= 1200;
+                    }
+                    stars.geometry.attributes.position.needsUpdate = true;
+                }
+
+                if (v > 0) {
+                    carGroup.position.x = (Math.random() - 0.5) * (v / maxV) * 0.15;
+                    carGroup.position.y = (Math.random() - 0.5) * (v / maxV) * 0.15;
+                }
+            }
+        }
+
+        renderer.render(scene, camera);
+    }
+
+    // Delay start slightly to guarantee DOM is ready before Physics Init
+    setTimeout(() => {
+        lastFrameTime = performance.now();
+        updatePhysics('dist');
+    }, 150);
+    
+    animate();
+</script>
+
+</body>
+</html>
